@@ -3,12 +3,17 @@ package mint.focus;
 import mint.types.Types;
 import mint.types.Types.Helper.in_rect;
 
+/*
+	(DK) changes
+		-mouseup() would double dispatch to the focused control, when unfocusing itself in it's mouseup callback
+		-not sure if this should be implemented for mousedown/move as well?
+*/
 class Focus {
 
     public var canvas: mint.Canvas;
 
     public function new(_canvas:mint.Canvas) {
-        
+
         canvas = _canvas;
 
         canvas.onmousemove.listen(mousemove);
@@ -56,25 +61,46 @@ class Focus {
     function mousedown(e:MouseEvent, target:mint.Control) {
         if(canvas.focused != null && canvas.focused.mouse_input) {
             canvas.focused.mousedown(e);
-        } 
+        }
 
         if(marked_mouse()) canvas.marked.mousedown(e);
 
     }
 
+// (DK) added code
     function mouseup(e:MouseEvent, target:mint.Control) {
+		// (DK) in case focus gets removed in the callback:
+		//	-canvas.focused == null
+		//	-canvas.marked == target
+		//	=> marked_mouse() doesn't fail and we get a double dispatch
+		//	-so we save the focused element here and compare it down below
+
+		//  TODO: marked_mouse(target) instead of this new wasFocused flag?
+		var wasFocused = canvas.focused;
+
         if(canvas.focused != null && canvas.focused.mouse_input) {
             canvas.focused.mouseup(e);
-        } 
+        }
+
+        if(marked_mouse() && wasFocused != canvas.marked) canvas.marked.mouseup(e);
+    }
+// (DK) /added code
+
+// (DK) removed code
+/*    function mouseup(e:MouseEvent, target:mint.Control) {
+        if(canvas.focused != null && canvas.focused.mouse_input) {
+            canvas.focused.mouseup(e);
+        }
 
         if(marked_mouse()) canvas.marked.mouseup(e);
 
     }
+*/// (DK) /removed code
 
     function mousewheel(e:MouseEvent, target:mint.Control) {
         if(canvas.focused != null && canvas.focused.mouse_input) {
             canvas.focused.mousewheel(e);
-        } 
+        }
 
         if(marked_mouse()) canvas.marked.mousewheel(e);
 
@@ -134,7 +160,7 @@ class Focus {
 
         if(canvas.focused != null && canvas.focused.mouse_input) {
             canvas.focused.mousemove(e);
-        } 
+        }
 
         if(marked_mouse()) canvas.marked.mousemove(e);
 

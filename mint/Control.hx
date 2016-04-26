@@ -61,7 +61,15 @@ typedef ControlOptions = {
 /** An empty control.
     Base class for all controls
     handles propogation of events,
-    mouse handling, layout and so on */
+    mouse handling, layout and so on
+
+
+	(DK) changes
+		-ishovered is set/cleared before the onmouseenter/leave events are dispatched
+			-so it's possible to test ishovered in the callback now
+			-doesn't really makes much sense otherwise to me to even have this flag
+
+*/
 @:allow(mint.render.Renderer)
 class Control {
 
@@ -130,47 +138,47 @@ class Control {
     @:isVar public var children_bounds (get,null) : ChildBounds;
 
 
-        /** An event for when the control is created. Used by the rendering service */ 
+        /** An event for when the control is created. Used by the rendering service */
     public var oncreate      : Signal<Void->Void>;
-        /** An event for when (if) a control is marked as renderable and is rendered. */ 
+        /** An event for when (if) a control is marked as renderable and is rendered. */
     public var onrender      : Signal<Void->Void>;
-        /** An event for when the bounds of the control change. */ 
+        /** An event for when the bounds of the control change. */
     public var onbounds      : Signal<Void->Void>;
-        /** An event for when the control is being destroyed. */ 
+        /** An event for when the control is being destroyed. */
     public var ondestroy     : Signal<Void->Void>;
-        /** An event for when the visibility of the control changes. */ 
+        /** An event for when the visibility of the control changes. */
     public var onvisible     : Signal<Bool->Void>;
-        /** An event for when the control moves in depth in the canvas. */ 
+        /** An event for when the control moves in depth in the canvas. */
     public var ondepth       : Signal<Float->Void>;
-        /** An event for when the clipping rectangle changes for the control. */ 
+        /** An event for when the clipping rectangle changes for the control. */
     public var onclip        : Signal<Bool->Float->Float->Float->Float->Void>;
-        /** An event for when a child is added to the control. */ 
+        /** An event for when a child is added to the control. */
     public var onchildadd    : Signal<Control->Void>;
-        /** An event for when a child is removed from the control. */ 
+        /** An event for when a child is removed from the control. */
     public var onchildremove : Signal<Control->Void>;
-        /** An event for when the mouse is clicked on this control (if `mouse_input`). */ 
+        /** An event for when the mouse is clicked on this control (if `mouse_input`). */
     public var onmousedown   : Signal<MouseSignal>;
-        /** An event for when the mouse is released on this control (if `mouse_input`). */ 
+        /** An event for when the mouse is released on this control (if `mouse_input`). */
     public var onmouseup     : Signal<MouseSignal>;
-        /** An event for when the mouse is moved inside this control (if `mouse_input`). */ 
+        /** An event for when the mouse is moved inside this control (if `mouse_input`). */
     public var onmousemove   : Signal<MouseSignal>;
-        /** An event for when the mousewheel is moved while the mouse is inside this control (if `mouse_input`). */ 
+        /** An event for when the mousewheel is moved while the mouse is inside this control (if `mouse_input`). */
     public var onmousewheel  : Signal<MouseSignal>;
-        /** An event for when the mouse enters the control (if `mouse_input`). */ 
+        /** An event for when the mouse enters the control (if `mouse_input`). */
     public var onmouseenter  : Signal<MouseSignal>;
-        /** An event for when the mouse leaves the control (if `mouse_input`). */ 
+        /** An event for when the mouse leaves the control (if `mouse_input`). */
     public var onmouseleave  : Signal<MouseSignal>;
-        /** An event for when a key is pressed and the control is focused (if `key_input`). */ 
+        /** An event for when a key is pressed and the control is focused (if `key_input`). */
     public var onkeydown     : Signal<KeySignal>;
-        /** An event for when a key is released and the control is focused (if `key_input`). */ 
+        /** An event for when a key is released and the control is focused (if `key_input`). */
     public var onkeyup       : Signal<KeySignal>;
-        /** An event for when a text/typing event happened and the control is focused (if `key_input`). */ 
+        /** An event for when a text/typing event happened and the control is focused (if `key_input`). */
     public var ontextinput   : Signal<TextSignal>;
-        /** An event for when this control gains or loses focus */ 
+        /** An event for when this control gains or loses focus */
     public var onfocused     : Signal<Bool->Void>;
-        /** An event for when this control is marked or unmarked for focus */ 
+        /** An event for when this control is marked or unmarked for focus */
     public var onmarked      : Signal<Bool->Void>;
-        /** An event for when this control is made or unmade the modal focus */ 
+        /** An event for when this control is made or unmade the modal focus */
     public var oncaptured    : Signal<Bool->Void>;
 
 
@@ -598,15 +606,34 @@ class Control {
 
     public function mouseenter( e:MouseEvent ) {
 
-        onmouseenter.emit(e, this);
+		// TODO (DK)
+		//	-does order matter here? i need it this way to properly update the CheckboxRenderer
+		//	-another way would be an event for hover changes
+// (DK) added code
         ishovered = true;
+// (DK) /added code
+
+        onmouseenter.emit(e, this);
+// (DK) removed code
+        //ishovered = true;
+// (DK) /removed code
 
     } //mouseenter
 
     public function mouseleave( e:MouseEvent ) {
 
-        onmouseleave.emit(e, this);
+
+		// TODO (DK)
+		//	-does order matter here? i need it this way to properly update the CheckboxRenderer
+		//	-another way would be an event for hover changes
+// (DK) added code
         ishovered = false;
+// (DK) /added code
+
+        onmouseleave.emit(e, this);
+// (DK) removed code
+		//ishovered = false;
+// (DK) /removed code
 
     } //mouseleave
 
@@ -643,19 +670,19 @@ class Control {
     } //update
 
     public inline function focus() {
-        
+
         if(canvas == this) return;
 
         var _pre = canvas.focused == this;
-        
+
         canvas.focused = this;
-        
+
         if(!_pre) onfocused.emit(true);
 
     } //focus
 
     public function unfocus() {
-        
+
         if(canvas == this) return;
         if(canvas.focused == this) {
             canvas.focused = null;
@@ -665,19 +692,19 @@ class Control {
     } //unfocus
 
     public inline function capture() {
-        
+
         if(canvas == this) return;
 
         var _pre = canvas.captured == this;
-        
+
         canvas.captured = this;
-        
+
         if(!_pre) oncaptured.emit(true);
 
     } //capture
 
     public inline function uncapture() {
-        
+
         if(canvas == this) return;
         if(canvas.captured == this) {
             canvas.captured = null;
@@ -687,7 +714,7 @@ class Control {
     } //uncapture
 
     public inline function mark() {
-        
+
         if(canvas == this) return;
 
         var _pre = canvas.marked == this;
@@ -695,11 +722,11 @@ class Control {
         canvas.marked = this;
 
         if(!_pre) onmarked.emit(true);
-    
+
     } //mark
 
     public inline function unmark() {
-        
+
         if(canvas == this) return;
         if(canvas.marked == this) {
             canvas.marked = null;

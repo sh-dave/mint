@@ -26,6 +26,20 @@ typedef CheckboxOptions = {
     A checkbox is a simple true or false switch.
     Changing the state will trigger the signal.
     Additional Signals: onchange
+
+	(DK) changes:
+		-capture focus on mouseDown
+			-button still has focus when we move outside while pressed
+			-at least thats how it works on windows
+		-release focus on mouseUp
+		-checking for ishovered + isfocused before changing state
+
+		that results in:
+		- old: press outside button, move inside button, release button => state change ... bug? (at least imo)
+		- old: press inside, move outside, move inside, release button => no state change
+
+		- new: press outside button, move inside button, release button => no stage change
+		- new: press inside, move outside, move inside, release button => state change
 */
 @:allow(mint.render.Renderer)
 class Checkbox extends Control {
@@ -61,6 +75,10 @@ class Checkbox extends Control {
             onchange.listen( options.onchange );
         }
 
+// (DK) added code
+		onmousedown.listen(this_onMouseDownHandler);
+// (DK) /added code
+
         onmouseup.listen(onclick);
 
         oncreate.emit();
@@ -68,11 +86,23 @@ class Checkbox extends Control {
     } //new
 
 //Internal
+	function this_onMouseDownHandler( e, c ) {
+		focus();
+	}
 
     function onclick(_, _) {
 
-        state = !state;
+// (DK) removed code
+        //state = !state;
+// (DK) /removed code
 
+// (DK) added code
+		if (ishovered && isfocused) {
+			state = !state;
+		}
+
+		unfocus();
+// (DK) /added code
     } //onclick
 
     function set_state( _b:Bool ) {
